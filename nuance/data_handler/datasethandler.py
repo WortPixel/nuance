@@ -40,6 +40,29 @@ def create_folder(path):
         subprocess.call(['mkdir', '-p', path])
 
 
+def get_burnsample(path, months=None):
+    ''' Provide list of paths to hd5 files with run numbers ending with zero
+    
+        Args:
+            months: list of strings
+            Each string with month numbers (MM) to select runs from.
+
+        Returns:
+            List of paths to given burnsample runs
+
+    '''
+    result = []
+    for date in listdir(path):
+        if months is not None:
+            months = check_type(month, list, default=[])
+            if not any([date.startswith(month) for month in months]):
+                continue
+        for run in listdir(join(path, date)):
+            if run.startswith('Run') and run.endswith('0'):
+                result.append(join(path, date, run))
+    return result
+
+
 class DataSetHandler(object):
     ''' A handler for multiple data sets'''
     def __init__(self, db_dir=DB_CACHE, data_dir=DATA_DIR):
