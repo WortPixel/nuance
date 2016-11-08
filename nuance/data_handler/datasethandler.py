@@ -54,7 +54,6 @@ def get_burnsample(path, months=None):
     result = []
     for date in listdir(path):
         if months is not None:
-            months = check_type(month, list, default=[])
             if not any([date.startswith(month) for month in months]):
                 continue
         for run in listdir(join(path, date)):
