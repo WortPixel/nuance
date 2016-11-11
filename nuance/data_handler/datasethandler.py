@@ -50,6 +50,7 @@ def get_burnsample(path, months=None):
         Returns:
             List of paths to given burnsample runs
 
+        TODO get runs from goodrunlist and parse them, get livetimes and gcd's
     '''
     result = []
     for date in listdir(path):
