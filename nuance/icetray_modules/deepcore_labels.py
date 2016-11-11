@@ -151,7 +151,7 @@ class DeepCoreLabels(icetray.I3ConditionalModule):
         if len(self.detector_parts.keys()) == 0:
         	raise IOError('You need to provide a gcd file.')
         primary = self.get_primary(frame)
-        in_parts = self.recfunc(frame, primary)
+        in_parts = self.is_cc_in_detector(frame, primary)
         if isinstance(in_parts, list):
             in_deepcore = True if 'deepcore' in in_parts else False
             if self._EXTENDED:
@@ -166,12 +166,12 @@ class DeepCoreLabels(icetray.I3ConditionalModule):
         self.PushFrame(frame)
 
 
-    def recfunc(self, frame, particle):
+    def is_cc_in_detector(self, frame, particle):
         ''' Check if daughter particles from particle create CC muons within
             detection volumes
 
             Args:
-                particle: I3Particle whoms secondaries (daughters) should be
+                particle: I3Particle whose secondaries (daughters) should be
                           checked.
             Returns:
                 List of detector setups containing the CC muon.
@@ -182,7 +182,7 @@ class DeepCoreLabels(icetray.I3ConditionalModule):
             for daughter in particle_daughters:
                 # NC interaction
                 if daughter.is_neutrino is True:
-                    return self.recfunc(frame, daughter)
+                    return self.is_cc_in_detector(frame, daughter)
                 # CC interaction
                 elif daughter.pdg_encoding in (-13, 13):
                     # get position of daughter particle
@@ -199,6 +199,7 @@ class DeepCoreLabels(icetray.I3ConditionalModule):
                     return []
         else:
             return []
+
 
 if __name__ == '__main__':
     from optparse import OptionParser
