@@ -14,9 +14,6 @@ from I3Tray import *
 from icecube import dataclasses, dataio, icetray
 from icecube.DeepCore_Filter import DOMS
 
-# load dom lists 
-dc_oms = DOMS.DOMS("IC86").DeepCoreFiducialDOMs
-ext_dc_oms = DOMS.DOMS("IC86EDC").DeepCoreFiducialDOMs
 
 class DetectorByDoms:
     ''' Create fiducial volume by accepting all positions within max_dist
@@ -100,7 +97,10 @@ class DetectorByContour:
             return False
 
 class DeepCoreLabels(icetray.I3ConditionalModule):
-    def __init__(self, context):
+    def __init__(self, context):        
+        # load dom lists 
+        self.dc_oms = DOMS.DOMS("IC86").DeepCoreFiducialDOMs
+        self.ext_dc_oms = DOMS.DOMS("IC86EDC").DeepCoreFiducialDOMs
         icetray.I3ConditionalModule.__init__(self, context)
         self.AddParameter('EXTENDED',
                           'EXTENDED',
@@ -121,15 +121,19 @@ class DeepCoreLabels(icetray.I3ConditionalModule):
                 gemetry_frame: GCD frame containing map between omkeys and
                                coordinates.
         '''
-        dom_lists = {'deepcore': dc_oms}
+        dom_lists = {'deepcore': self.dc_oms}
         if self._EXTENDED:
-            dom_lists['deepcore_ext'] = ext_dc_oms
+            dom_lists['deepcore_ext'] = self.ext_dc_oms
         i3geometry = geometry_frame['I3Geometry'].omgeo
         for configuration, dom_list in dom_lists.items():
             dom_pos = []
             for om in dom_list:
                 dom_pos.append(i3geometry[om].position)
             self.detector_parts[configuration] = detector(dom_pos)
+
+
+    def Finish(self, frame):
+        if self.detector_build:
 
 
     def Geometry(self, frame):
@@ -177,13 +181,14 @@ class DeepCoreLabels(icetray.I3ConditionalModule):
                 List of detector setups containing the CC muon.
         '''
         mctree = frame['I3MCTree']
+        # get daughter particles from interaction
         particle_daughters = mctree.get_daughters(particle)
         if len(particle_daughters) != 0:  # particle.dir.zenith < np.pi/2.
             for daughter in particle_daughters:
                 # NC interaction
                 if daughter.is_neutrino is True:
                     return self.is_cc_in_detector(frame, daughter)
-                # CC interaction
+                # CC interaction | pdg encoding (+/-) 13 = µ lepton
                 elif daughter.pdg_encoding in (-13, 13):
                     # get position of daughter particle
                     v_pos = np.array([daughter.pos.x,
