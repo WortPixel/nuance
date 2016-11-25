@@ -25,7 +25,7 @@ def create_event_id(frame):
         frame['I3EventHeader'] = header
 
 
-def get_filter_values(frame):
+def create_filter_values(frame):
     '''
     Store FilerMask values regarding DeepCore into doubles so that they're still
     available when i3 files are converted to hdf5.
@@ -41,7 +41,7 @@ def get_filter_values(frame):
         print('FilterMask not found.')
 
 
-def get_primary(frame):
+def create_primary(frame, primary_name='I3MCPrimary'):
     '''
     Check whether an attribute for the primary particle is existent,
     if not insert itself.
@@ -49,7 +49,6 @@ def get_primary(frame):
 
     # test if Streams=[icetray.I3Frame.Physics] works as well
     if frame.Stop == icetray.I3Frame.Physics:
-        primary_name = 'I3MCPrimary'
         if primary_name not in frame:
             try:
                 primaries = frame['I3MCTree'].get_primaries()
