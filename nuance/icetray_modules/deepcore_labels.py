@@ -13,6 +13,7 @@ from scipy.spatial import ConvexHull
 from I3Tray import *
 from icecube import dataclasses, dataio, icetray
 from icecube.DeepCore_Filter import DOMS
+from nuance.icetray_modules import get_primary
 
 
 class DetectorByDoms:
@@ -106,11 +107,15 @@ class DeepCoreLabels(icetray.I3ConditionalModule):
                           'EXTENDED',
                           'Calculate Label for extended deepcore region is set\
                            to true')
+        self.AddParameter('DETECTOR_BUILD_ONLY',
+                          'DETECTOR_BUILD_ONLY',
+                          'Only create file with detector build info.')
 
 
     def Configure(self):
         self.detector_parts = {}
         self._EXTENDED = self.GetParameter('EXTENDED')
+        self._DETECTOR_BUILD_ONLY = self.GetParameter('DETECTOR_BUILD_ONLY')
 
 
     def setup_detector_parts(self, geometry_frame,
@@ -132,8 +137,15 @@ class DeepCoreLabels(icetray.I3ConditionalModule):
             self.detector_parts[configuration] = detector(dom_pos)
 
 
-    def Finish(self, frame):
-        if self.detector_build:
+    def Finish(self):
+        ''' Create detector build of given detector configuration and export
+            it into a file '''
+        if self._DETECTOR_BUILD_ONLY:
+            if sys.version_info[0] >= 3:
+                import pickle
+            else:
+                import cPickle as pickle
+            pickle.dump(self.detector_parts, open('detector.pickle', 'wb'))
 
 
     def Geometry(self, frame):
@@ -142,19 +154,11 @@ class DeepCoreLabels(icetray.I3ConditionalModule):
         self.PushFrame(frame)
 
 
-    def get_primary(self, frame):
-        ''' Get primary particles to given frame '''
-        mctree = frame['I3MCTree']
-        ind = [i for i, x in enumerate(mctree.primaries)
-               if x.pdg_encoding in (-14, 14)][0]
-        return mctree.primaries[ind]
-
-
     def Physics(self, frame):
         ''' Check if muon from CC is created within detection volumes '''
         if len(self.detector_parts.keys()) == 0:
         	raise IOError('You need to provide a gcd file.')
-        primary = self.get_primary(frame)
+        primary = get_primary(frame, pdg_type=14)
         in_parts = self.is_cc_in_detector(frame, primary)
         if isinstance(in_parts, list):
             in_deepcore = True if 'deepcore' in in_parts else False
