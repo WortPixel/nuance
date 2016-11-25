@@ -28,7 +28,7 @@ from icecube.weighting import fluxes
 from icecube.weighting.weighting import from_simprod
 
 from nuance.icetray_modules import add_dict_to_frame
-from nuance.icetray_modules.generic_attributes import get_primary
+from nuance.icetray_modules.generic_attributes import create_primary
 
 
 class LowEWeightingCalculator(icetray.I3ConditionalModule):
@@ -77,7 +77,7 @@ class LowEWeightingCalculator(icetray.I3ConditionalModule):
 
 
     def Physics(self, frame):
-        get_primary(frame)
+        create_primary(frame)
         if not isinstance(self._flux_name, list):
             self._flux_name = [self._flux_name]
         weights = dict()
