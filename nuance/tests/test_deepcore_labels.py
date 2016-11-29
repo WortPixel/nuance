@@ -50,28 +50,6 @@ class TestDeepCoreLabels(unittest.TestCase):
 
 
 class TestExistance(TestDeepCoreLabels):
-    def runTest(self):
-        tray = I3Tray()
-        tray.AddModule('I3Reader', 'reader', Filenamelist=[self.gcd_file,
-                                                           self.i3_file])
-        tray.AddModule(dl.DeepCoreLabels,'labelmaker')
-        tray.AddModule('I3Writer', 'writer', Filename=os.path.join(
-            self.path,
-            'test/ouput.i3.gz'), 
-            Streams=[icetray.I3Frame.Physics,icetray.I3Frame.DAQ])
-        tray.AddModule('TrashCan', 'can')
-        tray.Execute(10)
-        del tray
-        i3_file = dataio.I3File(os.path.join(self.path, 'test/ouput.i3.gz'))
-        p_frame = i3_file.pop_physics()
-        self.assertTrue('cc_in_deepcore' in p_frame, 'cc_in_deepcore was not'\
-        ' found in i3_file after module execution')
-        del i3_file
-        del p_frame
-
-
-class CreateTestPlots(TestExistance):
-    ''' Create test plots from existing i3 files with deepcore labels '''
     def _get_data(self, i3_file):
         ''' Reads interaction type and position of a given i3 file
 
@@ -94,18 +72,16 @@ class CreateTestPlots(TestExistance):
             # CC, NC or other?
             interactions.append(get_interaction_type(pframe, primary))
             positions.append(get_position(pframe, primary))
-            label.append(pframe['cc_in_deepcore'])
+            label.append(pframe['cc_in_deepcore'].value)
             pframe = i3_file.pop_physics()
         positions = np.array(positions)
-        print(positions.shape)
+        label = np.array(label)
         frames = pd.DataFrame(np.array([positions[:,0],
                                         positions[:,1],
                                         positions[:,2],
                                         interactions,
                                         label]).swapaxes(0, 1),
                               columns=['x', 'y', 'z', 'type', 'label'])
-        print(len(frames['label']))
-        print(frames[0])
         self._data = frames
 
 
@@ -164,10 +140,11 @@ class CreateTestPlots(TestExistance):
             if view == 'top':
                 hull = self._detector[config].xy_plane.vertices
                 # plot MC event positions
-                mask = self._data.type != 'nc'
+                mask = np.logical_and(self._data.type == 'cc',
+                                      self._data.label)
                 plt.plot(self._data.x[mask], self._data.y[mask], 'b+',
                          label='nc')
-                mask = self._data.type == 'cc'
+                mask = np.logical_and(self._data.type == 'cc', self._data.label)
                 plt.plot(self._data.x[mask], self._data.y[mask], 'r+',
                          label='cc')
                 # plot label boarder as contour
@@ -209,11 +186,34 @@ class CreateTestPlots(TestExistance):
 
 
     def runTest(self):
+        output_file = 'test/output.i3.gz'
+        tray = I3Tray()
+        tray.AddModule('I3Reader', 'reader', Filenamelist=[self.gcd_file,
+                                                           self.i3_file])
+        tray.AddModule(dl.DeepCoreLabels,'labelmaker')
+        tray.AddModule('I3Writer', 'writer', Filename=os.path.join(
+            self.path,
+            output_file), 
+            Streams=[icetray.I3Frame.Physics,icetray.I3Frame.DAQ])
+        tray.AddModule('TrashCan', 'can')
+        tray.Execute()
+        i3_file = dataio.I3File(os.path.join(self.path, output_file))
+        p_frame = i3_file.pop_physics()
+        
+        self.assertTrue('cc_in_deepcore' in p_frame, 'cc_in_deepcore was not'\
+        ' found in i3_file after module execution')
+
+        # cleaning up
+        del tray
+        del i3_file
+        del p_frame
+
+        # create plots
+        self.i3_file = output_file
         self._get_detector(self.gcd_file)
         self._get_data(self.i3_file)
         self._plot_view(view='top')
         self._plot_view(view='side')
-
 
 
 if __name__ == '__main__':
