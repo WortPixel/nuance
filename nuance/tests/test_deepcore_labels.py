@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 import os
+from distutils.util import strtobool
 try:
     from subprocess import run
 except ImportError:
@@ -22,6 +23,8 @@ from icecube import dataclasses
 from icecube import dataio
 from icecube import icetray
 
+inp = input if sys.version_info[0] >= 3 else raw_input
+
 
 class TestDeepCoreLabels(unittest.TestCase):
     def setUp(self):
@@ -31,10 +34,9 @@ class TestDeepCoreLabels(unittest.TestCase):
         if not os.path.isdir(os.path.join(self.path, 'test')):
             os.mkdir(os.path.join(self.path, 'test'))
         self.i3_file = os.path.expandvars('$THESIS/data/i3/cc_in_dc_test.i3.gz')
-        self.gcd_file = os.path.expandvars('$THESIS/data/i3/GeoCalibDetectorSta'\
-            'tus_2013.56429_V1_Modified.i3.gz')
+        self.gcd_file = os.path.expandvars('$THESIS/data/i3/GeoCalibDetectorSt'\
+            'atus_2013.56429_V1_Modified.i3.gz')
         if not os.path.isfile(self.i3_file):
-            inp = input if sys.version_info[0] >= 3 else raw_input
             self.i3_file = inp('Please provide path to an low E i3 file: ')
         if not os.path.isfile(self.gcd_file):
             self.gcd_file = inp('Please provide matching gcd file: ')
@@ -68,7 +70,7 @@ class TestExistance(TestDeepCoreLabels):
         del p_frame
 
 
-class CreateTestPlots(TestDeepCoreLabels):
+class CreateTestPlots(TestExistance):
     ''' Create test plots from existing i3 files with deepcore labels '''
     def _get_data(self, i3_file):
         ''' Reads interaction type and position of a given i3 file
@@ -81,6 +83,7 @@ class CreateTestPlots(TestDeepCoreLabels):
         '''
         interactions = []
         positions = []
+        label = []
         # open i3 file
         i3_file = dataio.I3File(i3_file)
         # get interactions and positions of all frames (including all daughters)
@@ -91,16 +94,22 @@ class CreateTestPlots(TestDeepCoreLabels):
             # CC, NC or other?
             interactions.append(get_interaction_type(pframe, primary))
             positions.append(get_position(pframe, primary))
+            label.append(pframe['cc_in_deepcore'])
             pframe = i3_file.pop_physics()
         positions = np.array(positions)
         print(positions.shape)
-        frames = pd.DataFrame(np.array([positions[:,0], positions[:,1], positions[:,2],
-                               interactions]).swapaxes(0, 1),
-                              columns=['x', 'y', 'z', 'type'])
+        frames = pd.DataFrame(np.array([positions[:,0],
+                                        positions[:,1],
+                                        positions[:,2],
+                                        interactions,
+                                        label]).swapaxes(0, 1),
+                              columns=['x', 'y', 'z', 'type', 'label'])
+        print(len(frames['label']))
+        print(frames[0])
         self._data = frames
 
 
-    def _get_detector(self, gcd_file):
+    def _get_detector(self, gcd_file, output_file='detector.pickle'):
         ''' Generate detector contour using DeepCoreLabels
             Args:
                 gcd_file: dataio.I3File
@@ -108,20 +117,26 @@ class CreateTestPlots(TestDeepCoreLabels):
             Returns: dict
                 DOM positions of detector contours
         '''
-        tray = I3Tray()
-        tray.AddModule('I3Reader', 'reader', Filename=gcd_file)
-        # create 'detector.pickle' in current folder
-        tray.AddModule(dl.DeepCoreLabels, 'labelmaker',
-            DETECTOR_BUILD_ONLY=True, EXTENDED=False)
-        tray.AddModule('TrashCan','can')
-        tray.Execute()
-        tray.Finish()
-        # load detector file to return it 
+        create_new = True
+        if os.path.isfile(output_file):
+            create_new = inp('{} already exists. '\
+                             'Create new? [y/n] '.format(output_file))
+            create_new = strtobool(create_new)
+        if create_new:
+            tray = I3Tray()
+            tray.AddModule('I3Reader', 'reader', Filename=gcd_file)
+            # create output_file in current folder
+            tray.AddModule(dl.DeepCoreLabels, 'labelmaker',
+                DETECTOR_BUILD_ONLY=True, EXTENDED=False)
+            tray.AddModule('TrashCan','can')
+            tray.Execute()
+            tray.Finish()
+            # load detector file to return it 
         if sys.version_info[0] >= 3:
             import pickle
         else:
             import cPickle as pickle
-        self._detector = pickle.load(open('detector.pickle', 'rb'))
+        self._detector = pickle.load(open(output_file, 'rb'))
 
 
     def _plot_view(self, view='side'):
@@ -182,7 +197,7 @@ class CreateTestPlots(TestDeepCoreLabels):
                 plt.plot(x, z_max, 'k-')
                 # plot DOM positions
                 plt.plot(dom_positions[:,1], np.full_like(dom_positions[:,1],
-                         hull.z_max) 'o', label='DOMs')
+                         hull.z_max), 'o', label='DOMs')
                 plt.xlabel('x')
                 plt.ylabel('z')
                 plt.legend(loc="best")
