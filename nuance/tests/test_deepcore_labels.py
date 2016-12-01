@@ -23,6 +23,8 @@ from icecube import dataclasses
 from icecube import dataio
 from icecube import icetray
 
+import pdb
+
 inp = input if sys.version_info[0] >= 3 else raw_input
 
 
@@ -62,10 +64,12 @@ class TestExistance(TestDeepCoreLabels):
         interactions = []
         positions = []
         label = []
+
         # open i3 file
         i3_file = dataio.I3File(i3_file)
         # get interactions and positions of all frames (including all daughters)
         pframe = i3_file.pop_physics()
+
         while i3_file.more():
             # obtain primary
             primary = get_primary(pframe)
@@ -74,6 +78,7 @@ class TestExistance(TestDeepCoreLabels):
             positions.append(get_position(pframe, primary))
             label.append(pframe['cc_in_deepcore'].value)
             pframe = i3_file.pop_physics()
+
         positions = np.array(positions)
         label = np.array(label)
         frames = pd.DataFrame(np.array([positions[:,0],
@@ -140,12 +145,17 @@ class TestExistance(TestDeepCoreLabels):
             if view == 'top':
                 hull = self._detector[config].xy_plane.vertices
                 # plot MC event positions
-                mask = np.logical_and(self._data.type == 'cc',
-                                      self._data.label)
-                plt.plot(self._data.x[mask], self._data.y[mask], 'b+',
-                         label='nc')
-                mask = np.logical_and(self._data.type == 'cc', self._data.label)
+                mask = np.logical_and(self._data.type == 'nc',
+                                      self._data.label == 'True')
                 plt.plot(self._data.x[mask], self._data.y[mask], 'r+',
+                         label='nc')
+                mask = np.logical_and(self._data.type == 'nc',
+                                      self._data.label == 'False')
+                plt.plot(self._data.x[mask], self._data.y[mask], 'g+',
+                         label='nc')
+                mask = np.logical_and(self._data.type == 'cc',
+                                      self._data.label == 'True')
+                plt.plot(self._data.x[mask], self._data.y[mask], 'b+',
                          label='cc')
                 # plot label boarder as contour
                 plt.plot(hull[:,0], hull[:,1], 'k-', label='Contour')
