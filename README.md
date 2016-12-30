@@ -1,6 +1,5 @@
 # Nuance
-Nuance is a collection of tools used for analysing muon-neutrinos with DeepCore.
-These tools are the base for Philipp Schlunders [muon-neutrino flux unfolding](https://github.com/WortPixel/numu_spectrum).
+Toolchain for analysing data of the [icecube](https://github.com/WIPACrepo) [experiment](http://icecube.wisc.edu/). 
 
 ## Structure
 - **data_handler** tools for managing data sets
