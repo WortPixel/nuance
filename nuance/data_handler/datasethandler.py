@@ -97,10 +97,12 @@ class DataSetHandler(object):
         if self._observables is None:
             # TODO: parallelize observable loading
             all_attributes = [dataset.observables \
-                              for dataset in tqdm(self._datasets.values())]
+                              for dataset in tqdm(self._datasets.values()) \
+                              if not ":" in dataset.path]
             self._observables = list(reduce(set.intersection,
                                      map(set, all_attributes)))
             self._observables = list(map(str, self._observables))
+            self._observables = sorted(self._observables)
         return self._observables
 
     def load_all(self, skip=None, **kwargs):
@@ -113,10 +115,6 @@ class DataSetHandler(object):
                 # TODO: parallelize loading
                 print("Loading: {}".format(dataset))
                 data.load(**kwargs)
-
-    
-    def __getattr__(self, dataset_name):
-        return self._datasets[dataset_name]
 
 
     def __getitem__(self, dataset_name):
