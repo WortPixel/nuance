@@ -110,7 +110,8 @@ class HDFContainer:
                 warnings.simplefilter('ignore')
                 for table in f.iter_nodes('/', classname='Table'):
                     table_name = table.name
-                    if table_name not in blacklist_tabs:
+                    #if table_name not in blacklist_tabs:
+                    if not any([tab in table_name for tab in blacklist_tabs]):
                         col_names = [c for c in table.colnames
                                      if c not in blacklist_cols]
                         for c in col_names:
