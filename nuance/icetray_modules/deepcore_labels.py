@@ -104,18 +104,20 @@ class DeepCoreLabels(icetray.I3ConditionalModule):
         self.ext_dc_oms = DOMS.DOMS("IC86EDC").DeepCoreFiducialDOMs
         icetray.I3ConditionalModule.__init__(self, context)
         self.AddParameter('EXTENDED',
-                          'EXTENDED',
                           'Calculate Label for extended deepcore region is set\
                            to true')
         self.AddParameter('DETECTOR_BUILD_ONLY',
-                          'DETECTOR_BUILD_ONLY',
                           'Only create file with detector build info.')
+        self.AddParameter('NEUTRINO_TYPE',
+                          'PDG encoding for neutrino to check interaction from',
+                          '14')
 
 
     def Configure(self):
         self.detector_parts = {}
         self._EXTENDED = self.GetParameter('EXTENDED')
         self._DETECTOR_BUILD_ONLY = self.GetParameter('DETECTOR_BUILD_ONLY')
+        self._NEUTRINO_TYPE = int(self.GetParameter('NEUTRINO_TYPE'))
 
 
     def setup_detector_parts(self, geometry_frame,
@@ -158,8 +160,10 @@ class DeepCoreLabels(icetray.I3ConditionalModule):
         ''' Check if muon from CC is created within detection volumes '''
         if len(self.detector_parts.keys()) == 0:
         	raise IOError('You need to provide a gcd file.')
-        primary = get_primary(frame, pdg_type=14)
-        in_parts = self.is_cc_in_detector(frame, primary)
+        primary = get_primary(frame, pdg_type=self._NEUTRINO_TYPE)
+        # neutrino type - 1 = lepton flavour of given neutrino type
+        in_parts = self.is_cc_in_detector(frame, primary,
+                                          pdg_type=self._NEUTRINO_TYPE-1)
         if isinstance(in_parts, list):
             in_deepcore = True if 'deepcore' in in_parts else False
             if self._EXTENDED:
@@ -174,13 +178,16 @@ class DeepCoreLabels(icetray.I3ConditionalModule):
         self.PushFrame(frame)
 
 
-    def is_cc_in_detector(self, frame, particle):
+    def is_cc_in_detector(self, frame, particle, pdg_type=13):
         ''' Check if daughter particles from particle create CC muons within
             detection volumes
 
             Args:
                 particle: I3Particle whose secondaries (daughters) should be
                           checked.
+                pdg_type:
+                    PDG encoding for particles. 11 e, 12 nue, 13 mu, 14 numu,
+                    15 tau, 16 nutau
             Returns:
                 List of detector setups containing the CC muon.
         '''
@@ -192,8 +199,7 @@ class DeepCoreLabels(icetray.I3ConditionalModule):
                 # NC interaction
                 if daughter.is_neutrino is True:
                     return self.is_cc_in_detector(frame, daughter)
-                # CC interaction | pdg encoding (+/-) 13 = µ lepton
-                elif daughter.pdg_encoding in (-13, 13):
+                elif daughter.pdg_encoding in (-pdg_type, pdg_type):
                     # get position of daughter particle
                     v_pos = np.array([daughter.pos.x,
                                       daughter.pos.y,
