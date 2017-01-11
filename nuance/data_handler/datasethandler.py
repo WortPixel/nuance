@@ -65,8 +65,26 @@ def get_burnsample(path, months=None):
 
 class DataSetHandler(object):
     ''' A handler for multiple data sets'''
-    def __init__(self, db_dir=DB_CACHE, data_dir=DATA_DIR):
-        ''' Scan database for all available dataset files'''
+    def __init__(self, db_dir=DB_CACHE, data_dir=DATA_DIR, settings=None):
+        ''' Scan database for all available dataset files
+            
+            Args:
+                db_dir: 
+                    Directory holding the data base cache files
+                data_dir:
+                    Root directory of data sets
+                settings:
+                    Path to general setting file concerning all data sets
+        '''
+        if not settings is None:
+            with open(settings, 'r') as s:
+                json_file = json.load(s)
+                self._blacklists = {k: v for k, v in json_file.items() \
+                                    if 'blacklist' in k}
+                self._loading_properties = json_file['datasets']
+        else:
+            self._blacklists = dict()
+            self._loading_properties = dict()
         self._datasets = dict()
         try:
             self._dataset_paths = glob(join(db_dir, '*.' + DB_SUFFIX))
@@ -80,11 +98,17 @@ class DataSetHandler(object):
         for path in self._dataset_paths:
             with open(path, 'r') as current_file:
                 json_file = json.load(current_file)
-                path_dict[json_file['type']] = path
-                self._datasets[json_file['type']] = DataSet(json_file,
+                data_type = json_file['type']
+                path_dict[data_type] = path
+                self._datasets[data_type] = DataSet(json_file,
                                                             data_dir=data_dir)
+                try:
+                    self._datasets[data_type]._weight_names = self._loading_properties[data_type]['weights']
+                except:
+                    pass
         self._dataset_paths = path_dict
         self._observables = None
+
 
     @property
     def datasets(self):
@@ -96,8 +120,9 @@ class DataSetHandler(object):
         ''' Get intersection of all observables '''
         if self._observables is None:
             # TODO: parallelize observable loading
-            all_attributes = [dataset.observables \
-                              for dataset in tqdm(self._datasets.values()) \
+            all_attributes = [dataset.observables(**self._blacklists) \
+                              for dataset in tqdm(self._datasets.values(),
+                                desc="Scanning datasets for observables ") \
                               if not ":" in dataset.path]
             self._observables = list(reduce(set.intersection,
                                      map(set, all_attributes)))
@@ -105,7 +130,8 @@ class DataSetHandler(object):
             self._observables = sorted(self._observables)
         return self._observables
 
-    def load_all(self, skip=None, **kwargs):
+
+    def load_all(self, keys=None, skip=None, **kwargs):
         ''' Load all data sets with the given options in kwargs '''
         if not skip is None:
             if isinstance(skip, str):
@@ -114,7 +140,15 @@ class DataSetHandler(object):
             if not skip is None and not dataset in skip:
                 # TODO: parallelize loading
                 print("Loading: {}".format(dataset))
-                data.load(**kwargs)
+                n_files = self._loading_properties[dataset]['n_files']
+                if keys is None:
+                    keys = self.observables
+                props = self._loading_properties[dataset]
+                if 'keys' in props.keys():
+                    keys += props['keys']
+                if 'weights' in props.keys():
+                    keys += props['weights']
+                data.load(keys=keys, n_files=n_files, **kwargs)
 
 
     def __getitem__(self, dataset_name):
@@ -287,29 +321,27 @@ class DataSet(object):
         return weight_names
 
 
-    def _load_from_hdf(self, files, keys=None, observables_only=False,
-                       exists_col=None, **kwargs):
+    def _load_from_hdf(self, files, keys=None, exists_col=None,
+                       observables_only=False, **kwargs):
         if ':' in self.path:
             raise NotImplementedError("Files are on a remote location. Loading to cache from remote isn't supported, yet.")
         file_list = [join(self.path, filename) for filename in files]
         try:
-            container = HDFContainer(file_list=file_list)
-            self.loaded = True
+            container = HDFContainer(exists_col=exists_col, file_list=file_list)
         except:
-            self.loaded = False
+            container = None
 
-        if self.loaded:
+        if not container is None:
             if not observables_only:
                 if keys is not None:
-                    # TODO: compare keys vs observables, to only
-                    #       ask for available ones
-
                     self.data = container.get_df(keys)
                     self._observables = keys
                 else:
-                    self._observables = container.get_observables(check_all=False,
-                                                                  **kwargs)
+                    if self._observables is None:
+                        self._observables = container.get_observables(
+                            check_all=False, **kwargs)
                     self.data = container.get_df(self._observables)
+                self.loaded = True
             else:
                 self._observables = container.get_observables(check_all=False,
                                                               **kwargs)
@@ -352,13 +384,6 @@ class DataSet(object):
 
 
     @property
-    def observables(self):
-        if self._observables is None:
-            self._load_from_hdf(self.files, observables_only=True)
-        return self._observables
-
-
-    @property
     def size_on_disk(self):
         if 'size_on_disk' in self.properties.keys():
             self._size_on_disk = int(self.properties['size_on_disk'])
@@ -391,9 +416,15 @@ class DataSet(object):
     def weight_names(self):
         ''' Retrieve weight names from data '''
         if self._weight_names is None:
-            self._weight_names = self._get_weight_names(self.observables,
+            self._weight_names = self._get_weight_names(self.observables(),
                                                         weight_tab="weights")
         return self._weight_names
+
+
+    def close(self):
+        ''' Cut reference to data in order to free memory '''
+        self.data = None
+        self.loaded = False
 
 
     def drop(self, keys, reason):
@@ -467,9 +498,7 @@ class DataSet(object):
             if is_ending_in(HDF_SUFFIX, files):
                 self._load_from_hdf(files, keys, exists_col=exists_col,
                                     **kwargs)
-                self._weight_names = self._get_weight_names(self._observables,
-                    weight_tab=weight_tab)
-                self._weights = self.data[self._weight_names]
+                self._weights = self.data[self.weight_names]
             elif is_ending_in(I3_SUFFIX, files):
                 self._load_from_i3(files, keys)
             else:
@@ -491,7 +520,10 @@ class DataSet(object):
                     local_dir=local_path)
 
 
-    def close(self):
-        ''' Cut reference to data in order to free memory '''
-        self.data = None
-        self.loaded = False
+    def observables(self, **kwargs):
+        if self._observables is None:            
+            if len(kwargs.keys()) > 0:
+                self._load_from_hdf(self.files, observables_only=True, **kwargs)
+            else:
+                self._load_from_hdf(self.files, observables_only=True)
+        return self._observables
