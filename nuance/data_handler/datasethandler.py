@@ -16,6 +16,7 @@ from os.path import isdir
 from os.path import join
 import subprocess
 
+import copy
 from glob import glob
 import json
 
@@ -136,19 +137,19 @@ class DataSetHandler(object):
         if not skip is None:
             if isinstance(skip, str):
                 skip = list(skip)
+        if keys is None:
+                keys = copy.copy(self.observables)
         for dataset, data in tqdm(self._datasets.items(), desc="Datasets "):
             if not skip is None and not dataset in skip:
                 # TODO: parallelize loading
-                print("Loading: {}".format(dataset))
+                temp_keys = copy.copy(keys)
                 n_files = self._loading_properties[dataset]['n_files']
-                if keys is None:
-                    keys = self.observables
                 props = self._loading_properties[dataset]
                 if 'keys' in props.keys():
-                    keys += props['keys']
+                    temp_keys += props['keys']
                 if 'weights' in props.keys():
-                    keys += props['weights']
-                data.load(keys=keys, n_files=n_files, **kwargs)
+                    temp_keys += props['weights']
+                data.load(keys=temp_keys, n_files=n_files, **kwargs)
 
 
     def __getitem__(self, dataset_name):
