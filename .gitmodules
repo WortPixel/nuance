@@ -1,6 +1,6 @@
 [submodule "nuance/job_handler/dagman_job_creator"]
 	path = nuance/job_handler/dagman_job_creator
-	url = git@github.com:WortPixel/dagman_job_creator.git
+	url = https://github.com/WortPixel/dagman_job_creator.git
 [submodule "nuance/plotting/data_mc_comparison"]
 	path = nuance/plotting/data_mc_comparison
 	url = https://github.com/mbrner/data_mc_plotter
