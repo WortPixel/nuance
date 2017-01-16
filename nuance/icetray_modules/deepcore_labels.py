@@ -105,12 +105,14 @@ class DeepCoreLabels(icetray.I3ConditionalModule):
         icetray.I3ConditionalModule.__init__(self, context)
         self.AddParameter('EXTENDED',
                           'Calculate Label for extended deepcore region is set\
-                           to true')
+                           to true',
+                          False)
         self.AddParameter('DETECTOR_BUILD_ONLY',
-                          'Only create file with detector build info.')
+                          'Only create file with detector build info.',
+                          False)
         self.AddParameter('NEUTRINO_TYPE',
                           'PDG encoding for neutrino to check interaction from',
-                          '14')
+                          14)
 
 
     def Configure(self):
