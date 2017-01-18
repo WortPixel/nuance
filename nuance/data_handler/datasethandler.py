@@ -205,6 +205,7 @@ class DataSet(object):
         self.blacklist = dataset['blacklist'] if 'blacklist' in dataset \
                                               else None
         self.data = None
+        self._data_dir = data_dir
         self.files_loaded = None
         self.key_log = dict()
         self.loaded = False 
@@ -480,6 +481,10 @@ class DataSet(object):
         if to_cache is True:
             files = np.array(self.files)
         elif to_cache is False:
+            import sys
+            if sys.version_info.major > 2:
+                raise NotImplementedError("Since paramiko only works with python 2 "\
+                    "this function doesn't support python 3, as well.")
             # need to get file list from remote
             hostname, remote_dir = self.properties['remote_path'].split(':')
             files = np.array(self._get_from_remote(
@@ -508,7 +513,7 @@ class DataSet(object):
             if 'local_path' in self.properties.keys():
                 local_path = expandvars(self.properties['local_path'])
             else:
-                local_path = join(data_dir, self.name)
+                local_path = join(self._data_dir, self.name)
                 self.properties['local_path'] = local_path
                 self.path = self.properties['local_path']
                 
