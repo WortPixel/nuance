@@ -80,10 +80,12 @@ class DataSetHandler(object):
         if not settings is None:
             with open(settings, 'r') as s:
                 json_file = json.load(s)
+                self._settings = json_file
                 self._blacklists = {k: v for k, v in json_file.items() \
                                     if 'blacklist' in k}
                 self._loading_properties = json_file['datasets']
         else:
+            self._settings = None
             self._blacklists = dict()
             self._loading_properties = dict()
         self._datasets = dict()
@@ -132,6 +134,23 @@ class DataSetHandler(object):
         return self._observables
 
 
+    def __getitem__(self, dataset_name):
+        return self._datasets[dataset_name]
+
+
+    def __str__(self):
+        ''' Print list of data sets type: name '''
+        if len(self._datasets) > 0:
+            output = 'Data sets: '
+            list_of_datasets = ', '.join(['{}: {}'.format(dataset,
+                self._datasets[dataset]['name']) for dataset \
+                in self._datasets.keys()])
+            output = output + list_of_datasets
+        else:
+            output = 'No data sets present.'
+        return outputs
+
+
     def apply_cut(self, key, operator, value):
         ''' Apply cut to datasets and weights if "key operator value" is true
 
@@ -171,7 +190,6 @@ class DataSetHandler(object):
                 dataset.weights = dataset.weights[mask]
 
 
-
     def load_all(self, keys=None, skip=None, **kwargs):
         ''' Load all data sets with the given options in kwargs '''
         if not skip is None:
@@ -192,21 +210,36 @@ class DataSetHandler(object):
                 data.load(keys=temp_keys, n_files=n_files, **kwargs)
 
 
-    def __getitem__(self, dataset_name):
-        return self._datasets[dataset_name]
+    def info(self, include_setup=False):
+        ''' Print out rows, columns and loading status of datasets '''
+        print("-------------------------")
+        if include_setup:
+            print("Analysis setup:")
+            for key, value in self._settings.items():
+                print("\t{}:".format(key))
+                if isinstance(value, list):
+                    for item in value:
+                        print("\t\t{}".format(item))
+                elif isinstance(value, dict):
+                    for k, v in value.items():
+                        print("\t\t{}:".format(k))
+                        for a, b in v.items():
+                            print("\t\t\t{}: {}".format(a, b))
+                else:
+                    print("\t\t{}".format(value))
+            print("-------------------------")
 
-
-    def __str__(self):
-        ''' Print list of data sets type: name '''
-        if len(self._datasets) > 0:
-            output = 'Data sets: '
-            list_of_datasets = ', '.join(['{}: {}'.format(dataset,
-                self._datasets[dataset]['name']) for dataset \
-                in self._datasets.keys()])
-            output = output + list_of_datasets
-        else:
-            output = 'No data sets present.'
-        return output
+        for name, dataset in self._datasets.items():
+            print("{} is loaded: {}".format(name, dataset.loaded))
+            if dataset.loaded:
+                print("\tData: \n\t\t{} events \n\t\t{} attributes".format(
+                    dataset.data.shape[0],
+                    dataset.data.shape[1]))
+                print("\tWeights: \n\t\t{} events \n\t\t{} attributes".format(
+                    dataset.weights.shape[0],
+                    dataset.weights.shape[1]))
+                print("\t\tUsed weights: {}".format(dataset.weight_names))
+            print("-------------------------")
 
 
     def update(self):
