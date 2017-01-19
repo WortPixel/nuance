@@ -132,6 +132,46 @@ class DataSetHandler(object):
         return self._observables
 
 
+    def apply_cut(self, key, operator, value):
+        ''' Apply cut to datasets and weights if "key operator value" is true
+
+            Args:
+                key:
+                    Column of the dataset to apply cut to
+                operator:
+                    Comparison operator for key and value
+                value:
+                    Value to compare entries of given column (key) to
+        '''
+        for name, dataset in self._datasets.items():
+            if dataset.loaded:
+                # create cut mask
+                if operator == '==':
+                    mask = dataset.data[key] == value
+                elif operator == '!=':
+                    mask = dataset.data[key] != value
+                elif operator == '>=':
+                    mask = dataset.data[key] >= value
+                elif operator == '<=':
+                    mask = dataset.data[key] <= value
+                elif operator == '>':
+                    mask = dataset.data[key] > value
+                elif operator == '<':
+                    mask = dataset.data[key] < value
+                elif operator == 'is':
+                    mask = dataset.data[key] is value
+                elif operator == 'is not':
+                    mask = dataset.data[key] is not value
+                else:
+                    raise ValueError('Operator has to be: ==, !=, >=, <=, >,'\
+                        ' <, is, is not')
+
+                # apply cut
+                dataset.data = dataset.data[mask]
+                dataset.weights = dataset.weights[mask]
+
+
+
     def load_all(self, keys=None, skip=None, **kwargs):
         ''' Load all data sets with the given options in kwargs '''
         if not skip is None:
