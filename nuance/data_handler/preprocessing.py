@@ -9,7 +9,7 @@ from fnmatch import fnmatch
 def get_nan_ratio(df, white_list, weight=None, rel=True):
     nan_ratio = pd.Series(0., index=white_list)
     if weight is not None:
-        w_array = np.array(df[weight])
+        w_array = np.array(weight)
         sum_w = np.sum(w_array)
         for o in white_list:
             nan_array = np.array(df[o].isnull(), dtype=float)
