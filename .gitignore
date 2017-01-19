@@ -1,5 +1,6 @@
 .DS_Store
 *.dataset
+*.pickle
 nuance/data_handler/hdfchain.py
 nuance/data_handler/i3_to_df.py
 nuance/icetray_modules/GoodRunSampler
