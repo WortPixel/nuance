@@ -1,5 +1,9 @@
 .DS_Store
 *.dataset
+nuance/data_handler/hdfchain.py
+nuance/data_handler/i3_to_df.py
+nuance/icetray_modules/GoodRunSampler
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
