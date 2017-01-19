@@ -3,7 +3,6 @@
 
 #from . import aml_to_hdf
 from . import datasethandler
-from . import hdfchain
 from . import parser
 
 from .datasethandler import DataSetHandler
