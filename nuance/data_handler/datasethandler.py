@@ -232,13 +232,7 @@ class DataSetHandler(object):
         for name, dataset in self._datasets.items():
             print("{} is loaded: {}".format(name, dataset.loaded))
             if dataset.loaded:
-                print("\tData: \n\t\t{} events \n\t\t{} attributes".format(
-                    dataset.data.shape[0],
-                    dataset.data.shape[1]))
-                print("\tWeights: \n\t\t{} events \n\t\t{} attributes".format(
-                    dataset.weights.shape[0],
-                    dataset.weights.shape[1]))
-                print("\t\tUsed weights: {}".format(dataset.weight_names))
+                dataset.info()
             print("-------------------------")
 
 
@@ -598,6 +592,15 @@ class DataSet(object):
                     filelist=files,
                     local_dir=local_path)
 
+
+    def info(self):
+        print("\tData: \n\t\t{} events \n\t\t{} attributes".format(
+            self.data.shape[0],
+            self.data.shape[1]))
+        print("\tWeights: \n\t\t{} events \n\t\t{} attributes".format(
+            self.weights.shape[0],
+            self.weights.shape[1]))
+        print("\t\tUsed weights: {}".format(self.weight_names))
 
     def observables(self, **kwargs):
         if self._observables is None:            
