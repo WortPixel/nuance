@@ -7,21 +7,24 @@ from fnmatch import fnmatch
 
 
 def get_nan_ratio(df, white_list, weight=None, rel=True):
-    nan_ratio = pd.Series(0., index=white_list)
-    if weight is not None:
-        w_array = np.array(weight)
-        sum_w = np.sum(w_array)
-        for o in white_list:
-            nan_array = np.array(df[o].isnull(), dtype=float)
-            if rel:
-                nan_ratio[o] = np.sum(nan_array * w_array) / sum_w
+    # init nan_count with zeros
+    nan_count = pd.Series(0., index=white_list)
+    # check if weight is given and in proper shape
+    if not weight is None:
+        if len(weight) > 1:
+            weight = weight.flatten()
+        denominator = np.sum(weight)
     else:
-        n_row = len(df)
-        for o in white_list:
-            nan_array = np.array(df[o].isnull(), dtype=float)
-            if rel:
-                nan_ratio[o] = nan_array / float(n_row)
-    return nan_ratio
+        weight = 1.
+        denominator = len(df)
+
+    # calculate nan count/ratio for each attribute, taking weight into account
+    for o in white_list:
+        nan_array = np.array(df[o].isnull(), dtype=float)
+        nan_count[o] = np.sum(nan_array * weight)
+        if rel:
+            nan_count[o] /= denominator
+    return nan_count
 
 
 def get_nan_ratio_total(dfs, white_list, weight=None):
