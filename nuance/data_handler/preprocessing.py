@@ -82,7 +82,7 @@ def get_dups_n_thresholds(df, white_list, thresholds):
 
 
 def generate_black_list_from_dups(dups, thresholds, sel_threshold):
-    index = np.argwhere(thresholds >= sel_threshold)[0]
+    index = np.argwhere(thresholds >= sel_threshold)[0][0]
     blacklist = []
     for i in range(index, len(dups)):
         blacklist.extend(dups[i])
