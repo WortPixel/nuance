@@ -45,10 +45,10 @@ def get_burnsample(path, months=None):
     ''' Provide list of paths to hd5 files with run numbers ending with zero
     
         Args:
-            months: list of strings
-            Each string with month numbers (MM) to select runs from.
+            months (:obj:`list` of :obj:`str`): Each string with month numbers
+                (MM) to select runs from.
 
-        Returns:
+        Returns (:obj:`list` of :obj:`str`):
             List of paths to given burnsample runs
 
         TODO get runs from goodrunlist and parse them, get livetimes and gcd's
@@ -155,12 +155,9 @@ class DataSetHandler(object):
         ''' Apply cut to datasets and weights if "key operator value" is true
 
             Args:
-                key:
-                    Column of the dataset to apply cut to
-                operator:
-                    Comparison operator for key and value
-                value:
-                    Value to compare entries of given column (key) to
+                key (str): Column of the dataset to apply cut to
+                operator (str): Comparison operator for key and value
+                value (float): Value to compare entries of given column to
         '''
         for name, dataset in self._datasets.items():
             if dataset.loaded:
@@ -248,13 +245,7 @@ class DataSetHandler(object):
 
 
 class DataSet(object):
-    ''' An object handling the data and meta-data of a given dataset.
-        
-        Args:
-            size_on_disc: Size of dataset on disc, load only if called and
-                not in database
-            size: Size of file loaded into memory
-    '''
+    ''' An object handling the data and meta-data of a given dataset. '''
     def __init__(self, dataset, data_dir=DATA_DIR):
         # load properties from dataset json file
         if not isinstance(dataset, dict):
@@ -317,18 +308,14 @@ class DataSet(object):
         ''' Connect to remote location to get/download filelist
 
             Args:
-                hostname: str
-                    SSH Hostname of the remote server
-                remote_dir: str
-                    Path of the source directory
-                filelist_only: bool
-                    Get only a list of all files in the remote dir, or download
-                    it
-                local_dir: str
-                    Path to local download destination
+                hostname (str): SSH Hostname of the remote server
+                remote_dir (str): Path of the source directory
+                filelist_only (bool): Get only a list of all files in the
+                    remote dir, or download it
+                local_dir (str): Path to local download destination
 
             Warning:
-                Currently not working with Python3
+                Currently not working with Python 3
         '''
         # similar to http://stackoverflow.com/a/20381739 and
         # https://gist.github.com/tell-k/4943359#file-paramiko_proxycommand_sample-py-L11
@@ -500,22 +487,23 @@ class DataSet(object):
         ''' Remove keys from data and write dropped keys to dataset
 
             Args:
-                keys: list
-                    List of strings with keys to remove.
-                reason: str
-                    Reaseon for dropping the key. Is stored in dataset.
+                keys (list): List of strings with keys to remove.
+                reason (str): Reaseon for dropping the key (stored in dataset)
         '''
         if not isinstance(keys, list):
+            if keys is None:
+                keys = []
             keys = [keys]
-        if not reason in keys:
-            self.key_log[reason] = keys
-        else:
-            self.key_log[reason] += keys
-        try:
-            self.data = self.data.drop(keys, axis=1)
-            self._observables = [o for o in self.observables if o not in keys]
-        except ValueError:
-            print('Tried to remove some attributes, that didn\'t exist')
+        if len(keys) > 0:
+            if not reason in keys:
+                self.key_log[reason] = keys
+            else:
+                self.key_log[reason] += keys
+            try:
+                self.data = self.data.drop(keys, axis=1)
+                self._observables = [o for o in self.observables() if o not in keys]
+            except ValueError:
+                print('Tried to remove some attributes, that didn\'t exist')
 
 
     def load(self, keys=None, n_files=None, to_cache=True, exists_col=None,
@@ -526,13 +514,13 @@ class DataSet(object):
                 keys: List of attributes to load. Attributes are (often)
                     reconstructions hence groups of properties.
                     Use attribute.property to only load these.
-                n_files: Number of files to load from available files in 
+                n_files (int): Number of files to load from available files in 
                     self.path. None loads all.
-                to_cache: Flag if files should be loaded (from remote) to 
-                    client, or into memory.
-                exists_col: Column with values determining if a algorithm worked
-                    If exists is 0 all other attributes for the event are set
-                    to NaN.
+                to_cache (bool): Flag if files should be loaded (from remote)
+                    to client, or into memory.
+                exists_col (str): Column with values determining if a algorithm
+                    worked. If exists is 0 all other attributes for the event
+                    are set to NaN.
                 kwargs:
                     Surpass attributes to i3hdf_to_df.get_observables e.g.
                     blacklist_obs=['LineFit.x'], blacklist_tabs=['SplineMPE']
