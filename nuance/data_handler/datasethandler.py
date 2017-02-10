@@ -187,6 +187,20 @@ class DataSetHandler(object):
                 dataset.weights = dataset.weights[mask]
 
 
+    def drop(self, to_drop):
+        ''' Drop attributes for all loaded data sets
+            
+            Args:
+                to_drop (dict): Reasons (keys) and attributes (value list)
+                    to drop
+        '''
+        for name, dataset in self._datasets.items():
+            if self._datasets[name].loaded:
+                for reason, cols in to_drop.items():
+                    if len(cols) > 0:
+                        dataset.drop(keys=cols, reason=reason)
+
+
     def load_all(self, keys=None, skip=None, **kwargs):
         ''' Load all data sets with the given options in kwargs '''
         if not skip is None:
